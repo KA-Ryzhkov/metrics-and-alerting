@@ -14,24 +14,6 @@ func dataRequest(m []metrics.Metric) []metrics.Metric {
 	return m
 }
 
-//func main() {
-//
-//	m := metrics.MetricStart(metrics.ListNameMetrics)
-//	fmt.Println(m[17])
-//
-//	m = dataRequest(m)
-//	fmt.Println(m[17])
-//	time.Sleep(2 * time.Second)
-//	m = dataRequest(m)
-//	fmt.Println(m[17])
-//	time.Sleep(2 * time.Second)
-//	m = dataRequest(m)
-//	fmt.Println(m[17])
-//	time.Sleep(2 * time.Second)
-//	m = dataRequest(m)
-//	fmt.Println(m[17])
-//}
-
 func generateUrl(m metrics.Metric, gauge bool) string {
 	if gauge {
 		url := fmt.Sprintf("http://localhost:8080/update/gauge/%s/%f/", m.Name, m.Gauge)
@@ -71,7 +53,7 @@ func main() {
 
 		for _, v := range m {
 			url := generateUrl(v, true)
-			fmt.Println("URL2:", url)
+			fmt.Println("URL1:", url)
 			err := sendPost(url)
 			if err != nil {
 				fmt.Println("Send gauge err:", err)
