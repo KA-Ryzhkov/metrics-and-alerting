@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/agent/flags"
 	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/agent/metrics"
 	"net/http"
 	"time"
@@ -47,6 +49,14 @@ func sendPost(url string) error {
 }
 
 func main() {
+	addr := new(flags.NetAddress)
+	report := new(flags.ReportInterval)
+	poll := new(flags.PollInterval)
+	flag.Var(addr, "a", "Net address host:port")
+	flag.Var(report, "r", "Report interval, integer")
+	flag.Var(poll, "p", "Poll interval, integer")
+	flag.Parse()
+
 	m := metrics.MetricStart(metrics.ListNameMetrics)
 	for {
 		m = dataRequest(m)
@@ -65,9 +75,10 @@ func main() {
 			if err != nil {
 				fmt.Println("Send gauge err:", err)
 			}
+			time.Sleep(poll.TimeInterval)
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(report.TimeInterval)
 	}
 
 }

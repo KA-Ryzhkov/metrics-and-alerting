@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/agent/metrics"
+	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/server/flags"
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
@@ -87,6 +89,11 @@ func allMetricsHandle(res http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	addr := new(flags.NetAddress)
+	_ = flag.Value(addr)
+	flag.Var(addr, "a", "Net address host:port")
+	flag.Parse()
+
 	MemStorage = metrics.MetricStart(metrics.ListNameMetrics)
 	r := chi.NewRouter()
 
@@ -94,6 +101,7 @@ func main() {
 	r.Get("/value/{type}/{name}/", printHandle)
 	r.Get("/", allMetricsHandle)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	fmt.Println("Server start, with parameters: http://" + addr.String())
+	log.Fatal(http.ListenAndServe(addr.String(), r))
 
 }
