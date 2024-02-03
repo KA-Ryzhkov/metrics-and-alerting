@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -89,8 +90,11 @@ func allMetricsHandle(res http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	// Get parameters from environment variable
+	address := os.Getenv("ADDRESS")
+
+	// Get parameters from command line argument (flag)
 	addr := new(flags.NetAddress)
-	_ = flag.Value(addr)
 	flag.Var(addr, "a", "Net address host:port")
 	flag.Parse()
 
@@ -101,7 +105,12 @@ func main() {
 	r.Get("/value/{type}/{name}/", printHandle)
 	r.Get("/", allMetricsHandle)
 
-	fmt.Println("Server start, with parameters: http://" + addr.String())
-	log.Fatal(http.ListenAndServe(addr.String(), r))
+	if address != "" {
+		fmt.Println("Server start, with parameters: http://" + address)
+		log.Fatal(http.ListenAndServe(address, r))
+	} else {
+		fmt.Println("Server start, with parameters: http://" + addr.String())
+		log.Fatal(http.ListenAndServe(addr.String(), r))
+	}
 
 }

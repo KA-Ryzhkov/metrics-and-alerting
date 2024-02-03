@@ -2,6 +2,7 @@ package flags
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +56,11 @@ func (r ReportInterval) String() string {
 }
 
 func (r *ReportInterval) Set(s string) error {
+	fmt.Println("s:", s)
+	if s == "" || s == "0" {
+		r.TimeInterval = 10 * time.Second // Default value
+		return nil
+	}
 	interval, err := strconv.Atoi(s)
 	if err != nil {
 		return errors.New("You need to enter the кeport interval, an integer")
@@ -62,7 +68,7 @@ func (r *ReportInterval) Set(s string) error {
 	if interval < 0 {
 		return errors.New("You need to enter the report interval, a positive integer")
 	} else if interval == 0 {
-		r.TimeInterval = 10 * time.Second
+		r.TimeInterval = 10 * time.Second // Default value
 	} else {
 		r.TimeInterval = time.Duration(interval) * time.Second
 	}
@@ -74,6 +80,10 @@ func (p PollInterval) String() string {
 }
 
 func (p *PollInterval) Set(s string) error {
+	if s == "" || s == "0" {
+		p.TimeInterval = 10 * time.Second // Default value
+		return nil
+	}
 	interval, err := strconv.Atoi(s)
 	if err != nil {
 		return errors.New("You need to enter the report interval, an integer")
@@ -82,7 +92,7 @@ func (p *PollInterval) Set(s string) error {
 	if interval < 0 {
 		return errors.New("You need to enter the report interval, a positive integer")
 	} else if interval == 0 {
-		p.TimeInterval = 2 * time.Second
+		p.TimeInterval = 2 * time.Second // Default value
 	} else {
 		p.TimeInterval = time.Duration(interval) * time.Second
 	}

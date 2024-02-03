@@ -24,7 +24,6 @@ func (a NetAddress) String() string {
 	if a.Port < 1 {
 		a.Port = 8080
 	}
-
 	return a.Host + ":" + strconv.Itoa(a.Port)
 }
 

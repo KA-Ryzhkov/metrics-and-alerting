@@ -6,6 +6,8 @@ import (
 	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/agent/flags"
 	"github.com/KA-Ryzhkov/metrics-and-alerting/cmd/agent/metrics"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -16,12 +18,12 @@ func dataRequest(m []metrics.Metric) []metrics.Metric {
 	return m
 }
 
-func generateUrl(m metrics.Metric, gauge bool) string {
+func generateUrl(m metrics.Metric, gauge bool, addr string) string {
 	if gauge {
-		url := fmt.Sprintf("http://localhost:8080/update/gauge/%s/%f/", m.Name, m.Gauge)
+		url := fmt.Sprintf("http://%s/update/gauge/%s/%f/", addr, m.Name, m.Gauge)
 		return url
 	} else {
-		url := fmt.Sprintf("http://localhost:8080/update/counter/%s/%d/", m.Name, m.Counter)
+		url := fmt.Sprintf("http://%s/update/counter/%s/%d/", addr, m.Name, m.Counter)
 		return url
 	}
 }
@@ -49,36 +51,77 @@ func sendPost(url string) error {
 }
 
 func main() {
-	addr := new(flags.NetAddress)
-	report := new(flags.ReportInterval)
-	poll := new(flags.PollInterval)
-	flag.Var(addr, "a", "Net address host:port")
-	flag.Var(report, "r", "Report interval, integer")
-	flag.Var(poll, "p", "Poll interval, integer")
+	// Get parameters from environment variable
+	addrEnv := os.Getenv("ADDRESS")
+	reportEnv, err := strconv.Atoi(os.Getenv("REPORT_INTERVAL"))
+	if err != nil {
+		reportEnv = 0
+	}
+	pollEnv, err := strconv.Atoi(os.Getenv("POLL_INTERVAL"))
+	if err != nil {
+		pollEnv = 0
+	}
+
+	// Get parameters from command line argument (flag)
+	addrFlag := new(flags.NetAddress)
+	reportFlag := new(flags.ReportInterval)
+	pollFlag := new(flags.PollInterval)
+	flag.Var(addrFlag, "a", "Net address host:port")
+	flag.Var(reportFlag, "r", "Report interval, integer")
+	flag.Var(pollFlag, "p", "Poll interval, integer")
 	flag.Parse()
 
-	m := metrics.MetricStart(metrics.ListNameMetrics)
-	for {
-		m = dataRequest(m)
+	addr := parameterPriorityAddr(addrEnv, addrFlag.String())
+	report := parameterPriorityTime(reportEnv, reportFlag.TimeInterval, 10)
+	poll := parameterPriorityTime(pollEnv, pollFlag.TimeInterval, 2)
 
-		for _, v := range m {
-			url := generateUrl(v, true)
-			fmt.Println("URL1:", url)
+	fmt.Printf("Start agent, with parameters: %s, report: %s , poll: %s", addr, report, poll)
+
+	metricsList := metrics.MetricStart(metrics.ListNameMetrics)
+
+	metricsChan := make(chan []metrics.Metric)
+	go func() {
+		for {
+			metricsChan <- dataRequest(metricsList)
+			time.Sleep(poll)
+		}
+	}()
+
+	for {
+		for _, v := range <-metricsChan {
+			url := generateUrl(v, true, addr)
+			fmt.Println("URL gauge:", url)
 			err := sendPost(url)
 			if err != nil {
 				fmt.Println("Send gauge err:", err)
 			}
 
-			url = generateUrl(v, false)
-			fmt.Println("URL2:", url)
+			url = generateUrl(v, false, addr)
+			fmt.Println("URL counter:", url)
 			err = sendPost(url)
 			if err != nil {
-				fmt.Println("Send gauge err:", err)
+				fmt.Println("Send counter err:", err)
 			}
-			time.Sleep(poll.TimeInterval)
 		}
 
-		time.Sleep(report.TimeInterval)
+		time.Sleep(report)
 	}
 
+}
+
+func parameterPriorityAddr(env string, s string) string {
+	if env != "" {
+		return env
+	}
+	return s
+}
+
+func parameterPriorityTime(env int, flag time.Duration, t int) time.Duration {
+	if env > 0 {
+		return time.Duration(env)
+	} else if flag > 0 {
+		return flag
+	} else {
+		return time.Duration(t) * time.Second // Default value
+	}
 }
